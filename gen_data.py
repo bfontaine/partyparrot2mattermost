@@ -7,6 +7,7 @@ from urllib import request
 from zipfile import ZipFile
 
 ROOT_URL = "https://cultofthepartyparrot.com"
+FLAGS_URL = "https://cultofthepartyparrot.com/flags.html"
 
 
 def urlopen(url):
@@ -22,16 +23,19 @@ def urlopen(url):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--only-hd", action="store_true", help="Only include HD emojis")
+    p.add_argument("--flags", action="store_true", help="Download flag emojis instead")
     p.add_argument("--output", "-o", type=str, help="Output directory (will be created)",
                    default="partyparrot2mattermost")
 
     opts = p.parse_args()
 
-    print("==> Getting the latest zip URL")
-    with urlopen(ROOT_URL) as response:
+    url = FLAGS_URL if opts.flags else ROOT_URL
+
+    print("==> Getting the latest zip URL", "for flags" if opts.flags else "")
+    with urlopen(url) as response:
         html = response.read().decode()
 
-    m = re.search(r'href="(/parrots-[a-z0-9]+\.zip)"', html)
+    m = re.search(r'href="(/(?:parrots|flags)-[a-z0-9]+\.zip)"', html)
     if not m:
         raise Exception("Can't find the latest zip URL")
 
@@ -56,7 +60,7 @@ def main():
         for f in zipfile.infolist():
             filename = f.filename
 
-            if not filename.startswith("parrots/") or not filename.endswith(".gif"):
+            if not (filename.startswith("parrots/") or filename.startswith("flags/")) or not filename.endswith(".gif"):
                 continue
 
             if opts.only_hd and "/hd/" not in filename:
